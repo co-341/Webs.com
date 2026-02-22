@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Webs.com</title>
+<style>
+/* ===== GLOBAL ===== */
+body{
+  margin:0;
+  font-family: Arial, Helvetica, sans-serif;
+  background:#f0f2f5;
+}
+.dark{background:#18191a;color:white;}
+a{text-decoration:none;color:inherit;}
+
+/* ===== NAVBAR ===== */
+.navbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  height:60px;
+  background:#1877f2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  color:white;
+  z-index:1000;
+}
+.navbar .logo{font-size:22px;font-weight:bold;}
+.navbar .user-controls button{
+  margin-left:8px;
+}
+
+/* ===== CONTAINER ===== */
+.container{
+  display:flex;
+  justify-content:center;
+  margin-top:80px;
+}
+
+/* ===== CARD ===== */
+.card{
+  background:white;
+  padding:20px;
+  border-radius:8px;
+  margin-bottom:15px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+.dark .card{background:#242526;}
+
+/* ===== INPUTS ===== */
+input,textarea{
+  width:100%;
+  padding:8px;
+  margin:5px 0;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+
+/* ===== BUTTONS ===== */
+button{
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  font-weight:bold;
+  transition:0.2s;
+}
+button:hover{opacity:0.85;}
+.primary{background:#1877f2;color:white;}
+.like-btn{background:#e4e6eb;color:#050505;}
+.dark .like-btn{background:#3a3b3c;color:white;}
+
+/* ===== POSTS ===== */
+.post img{max-width:100%;border-radius:6px;}
+.post b{display:block;color:#050505;}
+.post p{margin:5px 0;}
+.comment{font-size:13px;margin-left:10px;}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){
+  .container{flex-direction:column;align-items:center;}
+  .feed{width:95%;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <div class="logo">Webs</div>
+  <div class="user-controls">
+    <span id="userName"></span>
+    <button onclick="toggleDark()">🌙</button>
+    <button onclick="deleteAccount()" style="background:red;">Delete Account</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="container" id="loginPage">
+  <div class="card">
+    <h3>Login</h3>
+    <input id="loginUser" placeholder="Username">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button class="primary" onclick="login()">Login</button>
+    <p>Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
+  </div>
+</div>
+
+<!-- REGISTER PAGE -->
+<div class="container" id="registerPage" style="display:none;">
+  <div class="card">
+    <h3>Register</h3>
+    <input id="regUser" placeholder="Username">
+    <input id="regPass" type="password" placeholder="Password">
+    <button class="primary" onclick="register()">Register</button>
+    <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+  </div>
+</div>
+
+<!-- MAIN FEED -->
+<div class="container" id="mainFeed" style="display:none;">
+  <div class="feed">
+    <div class="card">
+      <textarea id="postInput" placeholder="What's on your mind?"></textarea>
+      <button class="primary" onclick="createPost()">Post</button>
+    </div>
+    <div id="feedPosts"></div>
+  </div>
+</div>
+
+<script>
+/* ===== DATA ===== */
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let posts = JSON.parse(localStorage.getItem("posts")) || [];
+let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
+let darkMode = JSON.parse(localStorage.getItem("darkMode")) || false;
+
+/* ===== SAVE ===== */
+function saveAll(){
+  localStorage.setItem("users",JSON.stringify(users));
+  localStorage.setItem("posts",JSON.stringify(posts));
+  localStorage.setItem("currentUser",JSON.stringify(currentUser));
+  localStorage.setItem("darkMode",JSON.stringify(darkMode));
+}
+
+/* ===== DARK MODE ===== */
+function toggleDark(){
+  darkMode=!darkMode;
+  document.body.className=darkMode?"dark":"";
+  saveAll();
+}
+
+/* ===== SHOW PAGES ===== */
+function showLogin(){
+  document.getElementById("loginPage").style.display="flex";
+  document.getElementById("registerPage").style.display="none";
+  document.getElementById("mainFeed").style.display="none";
+}
+function showRegister(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("registerPage").style.display="flex";
+  document.getElementById("mainFeed").style.display="none";
+}
+function showFeed(){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("registerPage").style.display="none";
+  document.getElementById("mainFeed").style.display="flex";
+  document.getElementById("userName").innerText=currentUser.name;
+  displayPosts();
+}
+
+/* ===== LOGIN ===== */
+function login(){
+  let u = document.getElementById("loginUser").value.trim();
+  let p = document.getElementById("loginPass").value.trim();
+  let user = users.find(x=>x.name===u && x.password===p);
+  if(!user){ alert("Invalid credentials"); return; }
+  currentUser=user;
+  saveAll();
+  showFeed();
+}
+
+/* ===== REGISTER ===== */
+function register(){
+  let u = document.getElementById("regUser").value.trim();
+  let p = document.getElementById("regPass").value.trim();
+  if(!u||!p){ alert("Enter username and password"); return; }
+  if(users.find(x=>x.name===u)){ alert("Username exists"); return; }
+  let user={id:Date.now(),name:u,password:p};
+  users.push(user);
+  currentUser=user;
+  saveAll();
+  showFeed();
+}
+
+/* ===== LOGOUT ===== */
+function logout(){
+  currentUser=null;
+  saveAll();
+  showLogin();
+}
+
+/* ===== DELETE ACCOUNT ===== */
+function deleteAccount(){
+  if(!currentUser) return;
+  if(!confirm("Are you sure you want to delete your account? This cannot be undone!")) return;
+  // Remove user
+  users = users.filter(u=>u.id!==currentUser.id);
+  // Remove their posts
+  posts = posts.filter(p=>p.user!==currentUser.name);
+  currentUser=null;
+  saveAll();
+  alert("Your account has been deleted.");
+  showLogin();
+}
+
+/* ===== POSTS ===== */
+function createPost(){
+  let text=document.getElementById("postInput").value.trim();
+  if(!text) return;
+  posts.unshift({id:Date.now(),user:currentUser.name,text,likes:[]});
+  document.getElementById("postInput").value="";
+  saveAll();
+  displayPosts();
+}
+
+function displayPosts(){
+  let html="";
+  posts.forEach(p=>{
+    html+=`
+    <div class="card post">
+      <b>${p.user}</b>
+      <p>${p.text}</p>
+      <button class="like-btn" onclick="toggleLike(${p.id})">❤️ ${p.likes.length}</button>
+    </div>`;
+  });
+  document.getElementById("feedPosts").innerHTML=html;
+}
+
+function toggleLike(id){
+  let post = posts.find(p=>p.id===id);
+  if(post.likes.includes(currentUser.id)){
+    post.likes = post.likes.filter(x=>x!==currentUser.id);
+  } else { post.likes.push(currentUser.id); }
+  saveAll();
+  displayPosts();
+}
+
+/* ===== INIT ===== */
+if(currentUser){ showFeed(); } else { showLogin(); }
+if(darkMode){ document.body.className="dark"; }
+</script>
+
+</body>
+</html>
